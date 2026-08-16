@@ -43,7 +43,7 @@ struct BudgetingApp: App {
         guard backendConfig.isConfigured else { return }
         let context = container.mainContext
         Task {
-            try? await syncService.syncAll(context: context)
+            _ = try? await syncService.syncAll(context: context)
         }
     }
 }

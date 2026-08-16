@@ -40,7 +40,10 @@ struct DashboardView: View {
                         Spacer()
                         Text(netWorth.formattedCurrency)
                             .fontWeight(.semibold)
-                            .foregroundStyle(netWorth >= 0 ? .primary : .red)
+                            // `.primary` resolves to HierarchicalShapeStyle and `.red` to Color —
+                            // different concrete types, so the ternary needs AnyShapeStyle to
+                            // unify them into a single type foregroundStyle can accept.
+                            .foregroundStyle(netWorth >= 0 ? AnyShapeStyle(.primary) : AnyShapeStyle(.red))
                     }
                 }
 

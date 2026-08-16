@@ -57,7 +57,7 @@ struct BankConnectionsView: View {
                     }
                     Button {
                         Task {
-                            try? await syncService.syncAll(context: context)
+                            _ = try? await syncService.syncAll(context: context)
                             await loadItems()
                         }
                     } label: {
