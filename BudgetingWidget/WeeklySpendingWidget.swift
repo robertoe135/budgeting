@@ -25,9 +25,12 @@ struct WeeklySpendingProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(nextRefresh)))
     }
 
-    @MainActor
     private func currentEntry() -> WeeklySpendingEntry {
-        let context = SharedModelContainer.shared.mainContext
+        // A plain background context, not `.mainContext` — that property is @MainActor-isolated
+        // in SwiftData, but TimelineProvider's methods are synchronous and non-isolated, so
+        // calling into the main actor from here doesn't type-check. Reading via a background
+        // context avoids the actor-hop entirely, which is the right call for a widget anyway.
+        let context = ModelContext(SharedModelContainer.shared)
         let settings = (try? context.fetch(FetchDescriptor<BudgetSettings>()))?.first ?? BudgetSettings()
         let charges = (try? context.fetch(FetchDescriptor<RecurringCharge>())) ?? []
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>())) ?? []
