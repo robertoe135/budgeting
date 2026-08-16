@@ -11,16 +11,26 @@ enum AppGroup {
 enum SharedModelContainer {
     static let shared: ModelContainer = {
         let schema = Schema([Account.self, Transaction.self, RecurringCharge.self, BudgetSettings.self])
+        let configuration: ModelConfiguration
 
-        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
-            fatalError("""
-                Unable to resolve the app group container URL. Confirm the '\(AppGroup.identifier)' \
-                App Group capability is enabled for both the Budgeting and BudgetingWidgetExtension targets.
+        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) {
+            let storeURL = groupURL.appendingPathComponent("Budgeting.sqlite")
+            configuration = ModelConfiguration(schema: schema, url: storeURL)
+        } else {
+            // Falls back to the app's own local storage instead of crashing outright — a
+            // misconfigured/not-yet-provisioned App Group (a common first-run signing gotcha)
+            // would otherwise hard-crash the app at launch with no way to even see it run. The
+            // trade-off: the widget can't read this data until the App Groups capability is
+            // actually enabled for both the Budgeting and BudgetingWidgetExtension targets in
+            // Xcode's Signing & Capabilities (see Backend/README.md's sibling, the root README,
+            // "Opening the project" section).
+            print("""
+                ⚠️ Could not resolve the '\(AppGroup.identifier)' App Group container — falling \
+                back to app-local storage. The app will work, but the home screen widget won't \
+                show data until App Groups is enabled for both targets in Signing & Capabilities.
                 """)
+            configuration = ModelConfiguration(schema: schema)
         }
-
-        let storeURL = groupURL.appendingPathComponent("Budgeting.sqlite")
-        let configuration = ModelConfiguration(schema: schema, url: storeURL)
 
         do {
             return try ModelContainer(for: schema, configurations: [configuration])
