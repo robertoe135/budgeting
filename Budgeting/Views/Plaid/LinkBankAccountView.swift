@@ -6,13 +6,13 @@ import LinkKit
 /// `reauthorizingItemId` to re-link an already-linked institution in Plaid's "update mode"
 /// (used after an item goes into `login_required`); leave it nil to link a new institution.
 ///
-/// Note: `success.metadata.institution?.id` / `.name` below are written against Plaid's
-/// long-standing Link metadata shape (stable across iOS/Android/Web for years), but this repo
-/// couldn't reach plaid.com from its sandbox to double-check the exact property names against
-/// LinkKit 7.x's current API — verify against Xcode's autocomplete/the real SuccessMetadata
-/// type the first time you build this.
+/// `success.metadata.institution` is non-optional in LinkKit 7.x's `SuccessMetadata` (confirmed
+/// via a real build — Xcode flagged the `?` this file originally had as invalid optional
+/// chaining on a non-optional value).
 struct LinkBankAccountView: View {
-    @Environment(\.modelContext) private var context
+    // Qualified because LinkKit also exports a type named `Environment` (its Plaid
+    // sandbox/development/production enum), which otherwise collides with SwiftUI's.
+    @SwiftUI.Environment(\.modelContext) private var context
     @EnvironmentObject private var syncService: PlaidSyncService
 
     var reauthorizingItemId: String? = nil
@@ -49,8 +49,8 @@ struct LinkBankAccountView: View {
                     Task {
                         await syncService.completeLink(
                             publicToken: success.publicToken,
-                            institutionId: success.metadata.institution?.id,
-                            institutionName: success.metadata.institution?.name,
+                            institutionId: success.metadata.institution.id,
+                            institutionName: success.metadata.institution.name,
                             context: context
                         )
                     }

@@ -109,6 +109,14 @@ enum PlaidAPIError: LocalizedError {
 
 /// Talks to *our own* backend (see Backend/), never to Plaid directly — the app never sees a
 /// Plaid access token, only the ephemeral link token and public token involved in the Link flow.
+///
+/// `@MainActor` because `BackendConfig` (an `@MainActor` `ObservableObject`, so its `@Published`
+/// properties can drive SwiftUI directly) is read throughout — including via `.shared` in the
+/// default init parameter below, which otherwise can't reference a main-actor-isolated static
+/// property from a nonisolated context. Every current call site is already on the main actor
+/// (SwiftUI views, or `PlaidSyncService`, itself `@MainActor`), so this adds no new `await`s
+/// beyond the ones already at each call site.
+@MainActor
 struct PlaidAPIClient {
     private let config: BackendConfig
 
