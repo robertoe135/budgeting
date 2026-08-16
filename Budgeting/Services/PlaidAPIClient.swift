@@ -111,17 +111,19 @@ enum PlaidAPIError: LocalizedError {
 /// Plaid access token, only the ephemeral link token and public token involved in the Link flow.
 ///
 /// `@MainActor` because `BackendConfig` (an `@MainActor` `ObservableObject`, so its `@Published`
-/// properties can drive SwiftUI directly) is read throughout — including via `.shared` in the
-/// default init parameter below, which otherwise can't reference a main-actor-isolated static
-/// property from a nonisolated context. Every current call site is already on the main actor
-/// (SwiftUI views, or `PlaidSyncService`, itself `@MainActor`), so this adds no new `await`s
-/// beyond the ones already at each call site.
+/// properties can drive SwiftUI directly) is read throughout. Every current call site is
+/// already on the main actor (SwiftUI views, or `PlaidSyncService`, itself `@MainActor`), so
+/// this adds no new `await`s beyond the ones already at each call site.
 @MainActor
 struct PlaidAPIClient {
     private let config: BackendConfig
 
-    init(config: BackendConfig = .shared) {
-        self.config = config
+    // `= nil` rather than `= .shared`: a default *argument expression* is evaluated in a
+    // nonisolated context regardless of the initializer's own isolation, so it can't reference
+    // a @MainActor static property directly. Falling back inside the body instead works because
+    // the body itself genuinely does run isolated.
+    init(config: BackendConfig? = nil) {
+        self.config = config ?? .shared
     }
 
     func fetchLinkToken(reauthorizingItemId: String? = nil) async throws -> LinkTokenResponse {

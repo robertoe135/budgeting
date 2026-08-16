@@ -6,9 +6,8 @@ import LinkKit
 /// `reauthorizingItemId` to re-link an already-linked institution in Plaid's "update mode"
 /// (used after an item goes into `login_required`); leave it nil to link a new institution.
 ///
-/// `success.metadata.institution` is non-optional in LinkKit 7.x's `SuccessMetadata` (confirmed
-/// via a real build — Xcode flagged the `?` this file originally had as invalid optional
-/// chaining on a non-optional value).
+/// Uses the session-based `Plaid.createPlaidLinkSession` API rather than the simpler
+/// `PlaidLinkView` — the latter is deprecated in current LinkKit in favor of this one.
 struct LinkBankAccountView: View {
     // Qualified because LinkKit also exports a type named `Environment` (its Plaid
     // sandbox/development/production enum), which otherwise collides with SwiftUI's.
@@ -18,14 +17,14 @@ struct LinkBankAccountView: View {
     var reauthorizingItemId: String? = nil
     var label: String = "Link a Bank Account"
 
-    @State private var linkToken: String?
+    @State private var linkSession: PlaidLinkSession?
     @State private var isPresentingLink = false
     @State private var isFetchingToken = false
     @State private var errorMessage: String?
 
     var body: some View {
         Button {
-            fetchTokenAndPresent()
+            fetchTokenAndCreateSession()
         } label: {
             if isFetchingToken {
                 ProgressView()
@@ -43,49 +42,61 @@ struct LinkBankAccountView: View {
             Text(errorMessage ?? "")
         }
         .sheet(isPresented: $isPresentingLink) {
-            if let linkToken {
-                PlaidLinkView(token: linkToken) { success in
-                    isPresentingLink = false
-                    Task {
-                        await syncService.completeLink(
-                            publicToken: success.publicToken,
-                            institutionId: success.metadata.institution.id,
-                            institutionName: success.metadata.institution.name,
-                            context: context
-                        )
-                    }
-                } onExit: { exit in
-                    isPresentingLink = false
-                    if let error = exit.error {
-                        errorMessage = error.localizedDescription
-                    }
-                } onEvent: { _ in
-                    // Available for diagnostics/analytics later; nothing to do with it yet.
-                } errorView: { error in
-                    VStack(spacing: 12) {
-                        Text("Failed to load Plaid Link")
-                        Text(error.localizedDescription)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Dismiss") { isPresentingLink = false }
-                    }
-                    .padding()
-                }
+            if let linkSession {
+                linkSession.sheet()
             }
         }
     }
 
-    private func fetchTokenAndPresent() {
+    private func fetchTokenAndCreateSession() {
         isFetchingToken = true
         Task {
             defer { isFetchingToken = false }
             do {
                 let response = try await PlaidAPIClient().fetchLinkToken(reauthorizingItemId: reauthorizingItemId)
-                linkToken = response.linkToken
-                isPresentingLink = true
+                createSession(linkToken: response.linkToken)
             } catch {
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    private func createSession(linkToken: String) {
+        let configuration = LinkTokenConfiguration(
+            token: linkToken,
+            onSuccess: { success in
+                isPresentingLink = false
+                Task {
+                    await syncService.completeLink(
+                        publicToken: success.publicToken,
+                        institutionId: success.metadata.institution.id,
+                        institutionName: success.metadata.institution.name,
+                        context: context
+                    )
+                }
+            },
+            onExit: { exit in
+                isPresentingLink = false
+                if let error = exit.error {
+                    errorMessage = error.localizedDescription
+                }
+            },
+            onEvent: { _ in
+                // Available for diagnostics/analytics later; nothing to do with it yet.
+            },
+            onLoad: {
+                // Link's own UI is ready inside the sheet; nothing extra needed here since we
+                // don't gate presenting the sheet on this (unlike Plaid's own sample, which
+                // waits for onLoad before enabling its button) — the sheet shows Link's own
+                // loading state until this fires.
+            }
+        )
+
+        do {
+            linkSession = try Plaid.createPlaidLinkSession(configuration: configuration)
+            isPresentingLink = true
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

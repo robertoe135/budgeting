@@ -1,5 +1,8 @@
 import Foundation
-import UserNotifications
+// UNUserNotificationCenter's completion-handler APIs predate Swift's Sendable checking, so its
+// closures trip @MainActor capture warnings even though they're safe in practice; @preconcurrency
+// tells the compiler to trust this framework's (pre-concurrency) API surface, per Xcode's own fix-it.
+@preconcurrency import UserNotifications
 
 /// Schedules and sends the app's local (in-phone) spending notifications. No backend is
 /// involved — everything is computed on-device from the user's manually-logged transactions.

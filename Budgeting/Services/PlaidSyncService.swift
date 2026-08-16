@@ -15,8 +15,13 @@ final class PlaidSyncService: ObservableObject {
 
     private let client: PlaidAPIClient
 
-    init(client: PlaidAPIClient = PlaidAPIClient()) {
-        self.client = client
+    // `= nil` rather than `= PlaidAPIClient()`: default *argument expressions* are evaluated
+    // in a nonisolated context even when the initializer they belong to is on a @MainActor
+    // type, so a default that directly constructs another @MainActor type doesn't type-check.
+    // Constructing it in the init body instead — which genuinely does run isolated — sidesteps
+    // that entirely. (Same fix applied to PlaidAPIClient's own init below.)
+    init(client: PlaidAPIClient? = nil) {
+        self.client = client ?? PlaidAPIClient()
     }
 
     /// Call right after Link's onSuccess: exchanges the public token server-side, then pulls
