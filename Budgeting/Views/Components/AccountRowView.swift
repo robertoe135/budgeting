@@ -11,9 +11,14 @@ struct AccountRowView: View {
 
             VStack(alignment: .leading) {
                 Text(account.name)
-                Text(account.institution.rawValue)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text(account.institution.rawValue)
+                    if account.isPlaidLinked {
+                        Image(systemName: "link")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
 
             Spacer()

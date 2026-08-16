@@ -49,7 +49,7 @@ enum TransactionKind: String, Codable {
     case income
 }
 
-/// A single manually-logged expense or income entry.
+/// A single expense or income entry — either typed in manually, or synced down from Plaid.
 @Model
 final class Transaction {
     var id: UUID
@@ -65,6 +65,13 @@ final class Transaction {
     var isDiscretionary: Bool
     var account: Account?
     var recurringCharge: RecurringCharge?
+
+    /// Non-nil for transactions synced from Plaid; used to upsert/de-dupe on sync and to tell a
+    /// Plaid-sourced entry apart from one the user typed in by hand. Nil for manual entries.
+    var plaidTransactionId: String?
+    /// Mirrors Plaid's `pending` flag — the charge has authorized but not yet posted, so the
+    /// amount/category may still change on a later sync.
+    var isPending: Bool
 
     var category: TransactionCategory {
         get { TransactionCategory(rawValue: categoryRaw) ?? .other }
@@ -85,7 +92,9 @@ final class Transaction {
         kind: TransactionKind = .expense,
         isDiscretionary: Bool? = nil,
         account: Account? = nil,
-        recurringCharge: RecurringCharge? = nil
+        recurringCharge: RecurringCharge? = nil,
+        plaidTransactionId: String? = nil,
+        isPending: Bool = false
     ) {
         self.id = UUID()
         self.date = date
@@ -97,5 +106,7 @@ final class Transaction {
         self.isDiscretionary = isDiscretionary ?? !TransactionCategory.fixedCategories.contains(category)
         self.account = account
         self.recurringCharge = recurringCharge
+        self.plaidTransactionId = plaidTransactionId
+        self.isPending = isPending
     }
 }

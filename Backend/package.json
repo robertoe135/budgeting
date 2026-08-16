@@ -1,0 +1,20 @@
+{
+  "name": "budgeting-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-user Plaid backend for the Budgeting iOS app: holds the Plaid access token(s), exposes link-token/exchange/accounts/transactions-sync endpoints, and receives Plaid webhooks. Never ships to the client.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "plaid": "^45.0.0"
+  }
+}

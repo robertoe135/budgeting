@@ -38,6 +38,13 @@ struct AccountsListView: View {
             .navigationTitle("Accounts")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
+                    NavigationLink {
+                        BankConnectionsView()
+                    } label: {
+                        Image(systemName: "link")
+                    }
+                }
+                ToolbarItem(placement: .primaryAction) {
                     Button { isPresentingNewAccount = true } label: { Image(systemName: "plus") }
                 }
             }

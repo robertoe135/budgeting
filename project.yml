@@ -10,6 +10,11 @@ configs:
   Debug: debug
   Release: release
 
+packages:
+  LinkKit:
+    url: https://github.com/plaid/plaid-link-ios-spm.git
+    from: 7.0.0
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -41,6 +46,7 @@ targets:
     dependencies:
       - target: BudgetingWidgetExtension
         embed: true
+      - package: LinkKit
     scheme:
       testTargets:
         - BudgetingTests

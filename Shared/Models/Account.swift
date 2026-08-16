@@ -28,8 +28,9 @@ enum AccountType: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// A tracked bank or credit account. Balances are entered/maintained manually by the user
-/// (this app does not link to banks) and are nudged automatically as transactions are logged.
+/// A tracked bank or credit account. Balances are either entered/maintained manually (nudged
+/// automatically as transactions are logged) or, for Plaid-linked accounts, synced straight
+/// from Plaid — see `plaidAccountId`.
 @Model
 final class Account {
     var id: UUID
@@ -44,6 +45,12 @@ final class Account {
     var colorHex: String
     var sortOrder: Int
     var isArchived: Bool
+
+    /// Non-nil once this account is linked via Plaid. `plaidItemId` identifies the institution
+    /// login (an Item can have multiple accounts); `plaidAccountId` identifies this specific
+    /// account within that Item. Both nil means the account is manually tracked.
+    var plaidAccountId: String?
+    var plaidItemId: String?
 
     @Relationship(deleteRule: .nullify, inverse: \Transaction.account)
     var transactions: [Transaction]? = []
@@ -69,7 +76,9 @@ final class Account {
         creditLimit: Double? = nil,
         colorHex: String = "0A84FF",
         sortOrder: Int = 0,
-        isArchived: Bool = false
+        isArchived: Bool = false,
+        plaidAccountId: String? = nil,
+        plaidItemId: String? = nil
     ) {
         self.id = UUID()
         self.name = name
@@ -80,7 +89,11 @@ final class Account {
         self.colorHex = colorHex
         self.sortOrder = sortOrder
         self.isArchived = isArchived
+        self.plaidAccountId = plaidAccountId
+        self.plaidItemId = plaidItemId
     }
+
+    var isPlaidLinked: Bool { plaidAccountId != nil }
 
     var availableCredit: Double? {
         guard type == .creditCard, let limit = creditLimit else { return nil }
